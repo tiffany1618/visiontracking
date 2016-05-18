@@ -11,11 +11,11 @@ using namespace std;
 Mat src; 
 Mat red;
 Mat blue;
-vector<vector<Point>> contours_red;
-vector<vector<Point>> contours_blue;
-vector<vector<Point>> contours_finish;
+vector<vector<Point> > contours_red;
+vector<vector<Point> > contours_blue;
+vector<vector<Point> > contours_finish;
 int thresh = 100;
-void contourFinder(Mat, vector<vector<Point>>&, int, void*);
+void contourFinder(Mat, vector<vector<Point> >&, int, void*);
 
 int main(int argc, char** argv)
 {
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void contourFinder(Mat img, vector<vector<Point>> &contours, int, void*) 
+void contourFinder(Mat img, vector<vector<Point> > &contours, int, void*) 
 {
     Mat canny_output;
     vector<Vec4i> hierarchy;
