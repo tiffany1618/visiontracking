@@ -20,7 +20,8 @@ def displayImage(image):
     cv.waitKey(0)
 
 def filterImageTape(input):
-    return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input)
+    #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light
+    return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light
 
 def filterImageBg(input):
     return cv.inRange(input, np.array([0,100,150]), np.array([50,200,255]), input)
@@ -28,14 +29,14 @@ def filterImageBg(input):
 def findContours(input):
     return cv.findContours(input, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
-def filterContours(contours1, contours2):
+def filterContours(contours1):
     contoursFinal = []
     for contour1 in contours1:
-        for contour2 in contours2:
-            if cv.matchShapes(contour1, contour2, 1, 0.0) < 0.001:
-                x,y,width,height = cv.boundingRect(contour1)
-                if(width > 50 and width < 300 and height > 50 and height < 300):
-                    contoursFinal.append(contour1)
+#        for contour2 in contours2:
+#            if cv.matchShapes(contour1, contour2, 1, 0.0) < 0.001:
+        x,y,width,height = cv.boundingRect(contour1)
+        if(width > 200 and width < 500 and height > 200 and height < 500):
+            contoursFinal.append(contour1)
     return contoursFinal
 
 def drawContours(input, contours):
@@ -76,7 +77,7 @@ def findHeight(vertices):
 def findTapeHeight(vertices):
     bottomY1, bottomY2 = findBottomY(vertices)
     topY1, topY2 = findTopY(vertices)
-    return (bottomY1[1] - topY1[1])
+    return math.fabs(bottomY1[1] - topY1[1])
 
 #def findAngle():
     #findAngle!
@@ -89,29 +90,35 @@ def findDistance(height, tapeHeight):
     robotDistance = math.sqrt((cameraDistance * cameraDistance) - (heightIn * heightIn))
     return robotDistance #inches
           
-camera = Camera()
-camera.getFrame()
+#camera = Camera()
+#camera.getFrame()
+#camera = picamera.PiCamera()
 
 def doTheThing():
     interval = time.time() 
 
     #image = camera.getFrame()
-    image = cv.imread("stuff1.png")
+    #camera.capture("stuffGreen.png")
+    image = cv.imread("stuffGreen.png")
     print("Capture:" + str(time.time()-interval))
 
     imgt = filterImageTape(image)
     print("Filter Tape:" + str(time.time()-interval))
-    imgy = filterImageBg(image)
-    print("Filter Image Background:" + str(time.time()-interval))
-    img1, contoursy, hierarchy1 = findContours(imgy)
-    print("Find Tape Contours:" + str(time.time()-interval))
+#    imgy = filterImageBg(image)
+#    print("Filter Image Background:" + str(time.time()-interval))
+#    img1, contoursy, hierarchy1 = findContours(imgy)
+#    print("Find Tape Contours:" + str(time.time()-interval))
     img2, contourst, hierarchy2 = findContours(imgt)
     print("Find Tape Contours:" + str(time.time()-interval))
-    contoursFinal = filterContours(contourst, contoursy)
+    contoursFinal = filterContours(contourst)
     print("Filter Contours:" + str(time.time()-interval))
     image = drawContours(image, contoursFinal)
-    distance = findDistance(findHeight(contoursFinal[0]), findTapeHeight(contoursFinal[0]))
-    print(distance)
+    if len(contoursFinal) != 0:
+        distance = findDistance(findHeight(contoursFinal[0]), findTapeHeight(contoursFinal[0]))
+        print("Distance:" + str(distance))
+    else:
+        print("no contours found")
+    print("find distance:" + str(time.time()-interval))
     return image
 
 image = doTheThing()
