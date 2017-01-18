@@ -11,7 +11,7 @@ CONST_IMG_HEIGHT = 1944 #pixels
 CONST_IMG_WIDTH = 2592 #pixels
 #CONST_CAMERA_HEIGHT #inches
 CONST_TAPE_HEIGHT = 7 #inches
-#CONST_TAPE_WIDTH #inches
+CONST_TAPE_WIDTH = 17 #inches
 #CONST_CAMERA_ANGLE #convert to radians
 
 def displayImage(image):
@@ -46,6 +46,7 @@ def findVertices(contour):
     contour = cv.convexHull(contour)
     return cv.approxPolyDP(contour, 5, True)
 
+"""
 def findBottomY(points):
     lowestY = points[0][0]
     secondLowestY = points[1][0] # [0] at end needed to unpack point
@@ -69,15 +70,34 @@ def findTopY(points):
         elif point[1] > secondHighestY[1]:
             secondHighestY = point
     return (highestY, secondHighestY)
+"""
+
+def pointsX(point):
+	return point[0]
+
+def pointsY(point):
+	return point[1]
+
+def sortPointsY(points): #sorts points from greatest to least Y value
+	points = sorted(points, key=pointsY)
+	points = sorted(points, reverse=True)
+	return points
 
 def findHeight(vertices):
-    bottomY1, bottomY2 = findBottomY(vertices)
-    return (CONST_IMG_HEIGHT - bottomY1[1])
+	vertices = sortPointsY(vertices)
+    return (CONST_IMG_HEIGHT - vertices[0])
 
 def findTapeHeight(vertices):
-    bottomY1, bottomY2 = findBottomY(vertices)
-    topY1, topY2 = findTopY(vertices)
-    return math.fabs(bottomY1[1] - topY1[1])
+	vertices = sortPointsY(vertices)
+    return math.fabs((vertices[len(vertices) - 1][1]) - (vertices[0][1]))
+
+def findTapeWidth(vertices):
+	vertices = sortPointsY(vertices)
+	return math.fabs(vertices[0][0] - vertices[1][0])
+
+def findMidTape(vertices): #finds midpoint of tape
+	vertices = sortPointsY(vertices)
+	return ((CONST_IMG_WIDTH/2) - (findTapeWidth(vertices)/2)) #left:negative, right:positive
 
 #def findAngle():
     #findAngle!
