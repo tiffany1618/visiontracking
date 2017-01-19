@@ -20,8 +20,11 @@ def displayImage(image):
     cv.waitKey(0)
 
 def filterImageTape(input):
-    return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light
-    #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light
+	cv.cvtColor(input, cv.COLOR_BGR2HSV)
+    #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light BGR
+    #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light BGR
+	#return cv.inRange(input, np.array([0, 0, 235]), np.array([20, 20, 255]), input) #white light HSV
+	return cv.inRange(input, np.array([50, 0, 190]), np.array([110, 255, 255]), input) #green light HSV
 
 def filterImageBg(input):
     return cv.inRange(input, np.array([0,100,150]), np.array([50,200,255]), input)
@@ -29,14 +32,12 @@ def filterImageBg(input):
 def findContours(input):
     return cv.findContours(input, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
-def filterContours(contours1):
+def filterContours(contours):
     contoursFinal = []
-    for contour1 in contours1:
-#        for contour2 in contours2:
-#            if cv.matchShapes(contour1, contour2, 1, 0.0) < 0.001:
-        x,y,width,height = cv.boundingRect(contour1)
+    for contour in contours:
+        x,y,width,height = cv.boundingRect(contour)
         if(width > 50 and width < 500 and height > 50 and height < 500):
-            contoursFinal.append(contour1)
+            contoursFinal.append(contour)
     return contoursFinal
 
 def drawContours(input, contours):
@@ -49,62 +50,53 @@ def approxPoly(contour):
 def findVertices(contour):
     return cv.boxPoints(cv.minAreaRect(contour))
 
-"""
-def findBottomY(points):
-    lowestY = points[0][0]
-    secondLowestY = points[1][0] # [0] at end needed to unpack point
-    for point in points:
-        point = point[0] # for unpacking point
-        if point[1] < lowestY[1]:
-            secondLowestY = lowestY
-            lowestY = point
-        elif point[1] > secondLowestY[1]:
-            secondLowestY = point
-    return (lowestY, secondLowestY)
-    
-def findTopY(points):
-    highestY = points[0][0]
-    secondHighestY = points[1][0] # [0] at end needed to unpack point
-    for point in points:
-        point = point[0] # for unpacking point
-        if point[1] > highestY[1]:
-            secondHighestY = highestY
-            highestY = point
-        elif point[1] > secondHighestY[1]:
-            secondHighestY = point
-    return (highestY, secondHighestY)
-"""
-
 def pointsX(point):
     return point[0]
 
 def pointsY(point):
     return point[1]
 
-def sortPointsY(points): #sorts points from greatest to least Y value
+def sortPointsY(points): #sorts points from greatest to least y value
     points = sorted(points, key=pointsY)
     points.reverse()
     return points
 
-def findHeight(vertices):
-    vertices = sortPointsY(vertices)
-    return (CONST_IMG_HEIGHT - vertices[0])
+def sortPointsX(points): #sorts points from greatest to least x value
+	points = sorted(points, key=pointsX)
+	points.reverse()
+	return points
+
+def pointDistance(point1, point2): #finds distance between two points
+	distance = math.sqrt(((point1[0]-point2[0])*(point1[0]-point2[0]))+((point1[1]-point2[1])*(point1[1]-point2[1])))
+	return distance
 
 def findTapeHeight(vertices):
-    vertices = sortPointsY(vertices)
-    return math.fabs((vertices[len(vertices) - 1][1]) - (vertices[0][1]))
+    vertices = sortPointsX(vertices)
+    return pointDistance(vertices[0], vertices[1])
 
 def findTapeWidth(vertices):
     vertices = sortPointsY(vertices)
-    return math.fabs(vertices[0][0] - vertices[1][0])
+    return pointDistance(vertices[0], vertices[1])
 
-def findMidTape(vertices): #finds midpoint of tape
-    vertices = sortPointsY(vertices)
-    return ((CONST_IMG_WIDTH/2) - (findTapeWidth(vertices)/2)) #left:negative, right:positive
+def findMidpoint(contours): #finds midpoint of tape, takes in a list of two contours
+	midpoint = []
+	vertices1 = sortPointsX(contours[0])
+	vertices2 = sortPointsX(contours[1])
+	midpoint[0] = math.fabs((vertices1[len(vertices1)-1][0] - vertices2[0][0])/2)
+	midpoint[1] = math.fabs((vertices1[len(vertices1)-1][1] - vertices2[0][1])/2)
+	return midpoint
 
-def findAngle(vertices):
+def findMidTape(contours): #finds distance from center of image to midpoint of tape
+	midpoint = findMidpoint(contours)
+	return (midpoint[0] - (CONST_IMG_WIDTH/2)) #negative:left, positive:right
+
+def findHeight(contours): #finds distance from bottom of image to bottom of tape
+	midpoint = findMidpoint(contours)
+    return (CONST_IMG_HEIGHT - midpoint[1])
+
+def findAngle(contours):
     horzPTR = CONST_IMG_WIDTH/CONST_HORZFOV #horizontal pixels to radians
-    angle = findMidTape(vertices)/horzPTR #angle in radians; left:negative, right:positive
+    angle = findMidTape(contours)/horzPTR #angle in radians; left:negative, right:positive
     return math.degrees(angle) #degrees
 
 def findDistance(height, tapeHeight):
@@ -141,9 +133,9 @@ def doTheThing():
     print(len(contoursFinal))
     if len(contoursFinal) > 0:
         points = findVertices(contoursFinal[0])
-        #distance = findDistance(findHeight(points), findTapeHeight(points))
+        #distance = findDistance(findHeight(contoursFinal), findTapeHeight(points))
         #print("Distance:" + str(distance))
-        angle = findAngle(points)
+        angle = findAngle(contoursFinal)
         print("Angle: " + str(angle))
     else:
         print("no contours found")
@@ -164,8 +156,10 @@ def getAngle():
     image = filterImageTape(image)
     image, contours, hierarchy = findContours(image)
     contoursTape = filterContours(contours)
-    if len(contoursTape) > 0:
-        return str(findAngle(findVertices(contoursTape[0])))
+    if len(contoursTape) == 2:
+        return str(findAngle(contoursTape))
+	elif len(contoursTape) > 0:
+		return "could not find tape"
     else:
         return "nope"
 	
