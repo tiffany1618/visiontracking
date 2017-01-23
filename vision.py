@@ -6,6 +6,7 @@ import time
 from operator import itemgetter
 #import picamera
 from os import listdir
+from random import random
 
 CONST_VERTFOV = math.radians(41.41) #vertical field of view
 CONST_HORZFOV = math.radians(53.50) #horizontal field of view
@@ -26,58 +27,85 @@ def takeImage():
     displayImage(image)
 
 def filterImageTape(input):
-    # input = cv.blur(input, (5,5))
+    input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
     #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light BGR
     #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light BGR
-    return cv.inRange(input, np.array([0, 150, 80]), np.array([255, 255, 200]), input) #white light HSV
-    #return cv.inRange(input, np.array([40, 0, 200]), np.array([100, 255, 255]), input) #green light HSV
+    #return cv.inRange(input, np.array([0, 150, 80]), np.array([255, 255, 200]), input) #white light HSV
+    return cv.inRange(input, np.array([40, 0, 200]), np.array([100, 255, 255]), input) #green light HSV
 
 def findContours(input):
     return cv.findContours(input, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
 def highestContours(contours):
-	index = [0,1]
-	x0,y0,w0,h0 = cv.boundingRect(contours[0])
-	x1,y1,w1,h1 = cv.boundingRect(contours[1])
-	if h1 > h0:
-		index = [1,0]
-		temp = h0
-		h0 = h1
-		h1 = temp
-	for i in range(2, len(contours)):
-		x,y,width,height = cv.boundingRect(contours[i])
-		if height > h0:
-			h1 = h0
-			h0 = height
-			index[1] = index[0]
-			index[0] = i
-		elif height > h1:
-			h1 = height
-			index[1] = i
-	return [contours[index[0]], contours[index[1]]]
+    index = [0,1]
+    x0,y0,w0,h0 = cv.boundingRect(contours[0])
+    x1,y1,w1,h1 = cv.boundingRect(contours[1])
+    if h1 > h0:
+        index = [1,0]
+        temp = h0
+        h0 = h1
+        h1 = temp
+    for i in range(2, len(contours)):
+        x,y,width,height = cv.boundingRect(contours[i])
+        if height > h0:
+            h1 = h0
+            h0 = height
+            index[1] = index[0]
+            index[0] = i
+        elif height > h1:
+            h1 = height
+            index[1] = i
+    return [contours[index[0]], contours[index[1]]]
 
 def filterContours(contours):
+    print("original: " + str(len(contours)))
     contoursFinal = []
     for contour in contours:
-		x,y,w,h = cv.boundingRect(contour)
-		aspectRatio = float(w)/h
+        x,y,w,h = cv.boundingRect(contour)
+        aspectRatio = float(w)/h
         #if cv.isContourConvex(contour):
-		if len(cv.approxPolyDP(contour, 5, True)) == 4:
-			if aspectRatio > 0.4 and aspectRatio < 0.5:
-				contoursFinal.append(contour)
-	if len(contoursFinal) > 2:
-		contoursFinal = highestContours(contoursFinal)
-	if len(contoursFinal) == 2:
-		if cv.matchShapes(contoursFinal[0], contoursFinal[1], 1, 0.0) < 0.001:
-			return contoursFinal
-		else:
-			return []
-	else:
-		return contoursFinal
+        if len(cv.approxPolyDP(contour, 5, True)) == 4:
+            if aspectRatio > 0.38 and aspectRatio < 0.5:
+                contoursFinal.append(contour)
+    if len(contoursFinal) >= 2:
+        contoursCopy = []
+        for i in range(len(contoursFinal)):
+            print("len" + str(len(contoursFinal)))
+            if i == (len(contoursFinal) - 1):
+                contoursCopy.append(contoursFinal[i])
+                break
+            x,y,w,h = cv.boundingRect(contoursFinal[i])
+            for j in range((i + 1), len(contoursFinal)):
+                xx,yy,ww,hh = cv.boundingRect(contoursFinal[j])
+                print("dif: " + str(math.fabs(x-xx)))
+                if math.fabs(x - xx) > 5 and math.fabs(y - yy) > 5:
+                    contoursCopy.append(contoursFinal[i])
+        contoursFinal = contoursCopy
+        print("double: " + str(len(contoursCopy)))
+    if len(contoursFinal) == 1:
+        x,y,w,h = cv.boundingRect(contoursFinal[0])
+        for contour in contours:
+            xx,yy,ww,hh = cv.boundingRect(contour)
+            if math.fabs(hh - h) < 5:
+                contoursFinal.append(contour)
+    if len(contoursFinal) > 2:
+        contoursFinal = highestContours(contoursFinal)
+    """
+    if len(contoursFinal) == 2:
+        if cv.matchShapes(contoursFinal[0], contoursFinal[1], 1, 0.0) < 0.002:
+            print("matchshapes: " + str(len(contoursFinal)))
+            return contoursFinal
+        else:
+            return []
+    """
+    return contoursFinal
 
 def drawContours(input, contours):
-    return cv.drawContours(input, contours, -1, (0,0,0), 3)
+    for i in range(len(contours)):
+        color = (random() * 255, random() * 255, random() * 255)
+        input = cv.drawContours(input, contours, i, color, 3)
+    return input
 
 def approxPoly(contour):
     contour = cv.convexHull(contour)
@@ -165,16 +193,14 @@ def vision():
     #print("Filter Contours:" + str(time.time()-interval))
         #image = cv.cvtColor(image, cv.COLOR_BGR2HSV)
         image = drawContours(image, contoursFinal)
-        print(len(contoursFinal))
+        print("contoursFinal: " + str(len(contoursFinal)))
         if len(contoursFinal) == 2:
-			x,y,w,h = cv.boundingRect(contoursFinal[0])
-			xx,yy,ww,hh = cv.boundingRect(contoursFinal[1])
-			print("aspect ratio 1: " + str(float(w)/h))
-			print("aspect ratio2: " + str(float(ww)/hh))
-			mid = findMid(contoursFinal)
-			print(mid)
-			angle = findAngle(mid)
-			print(angle)
+            x,y,w,h = cv.boundingRect(contoursFinal[0])
+            xx,yy,ww,hh = cv.boundingRect(contoursFinal[1])
+            mid = findMid(contoursFinal)
+            print("mid: " + str(mid))
+            angle = findAngle(mid)
+            print("angle: " + str(angle))
         cv.imwrite("imagesFiltered/new" + str(file), image)
     #cv.imwrite("images/tape" + str(i) + ".png", image)
     #displayImage(image)
