@@ -23,7 +23,7 @@ def displayImage(image):
     pass
 
 def filterImageTape(input):
-    input = cv.blur(input, (5,5))
+    # input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
     #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light BGR
     #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light BGR
@@ -38,17 +38,22 @@ def findContours(input):
 
 def filterContours(contours):
     contoursFinal = []
-    if len(contours) > 2:
+    contoursConvex = []
+    for contour in contours:
+        #if cv.isContourConvex(contour):
+        if len(cv.approxPolyDP(contour, 5, True)) == 4:
+            contoursConvex.append(contour)
+    if len(contoursConvex) > 2:
         index = [0,1]
-        x0,y0,w0,h0 = cv.boundingRect(contours[0])
-        x1,y1,w1,h1 = cv.boundingRect(contours[1])
+        x0,y0,w0,h0 = cv.boundingRect(contoursConvex[0])
+        x1,y1,w1,h1 = cv.boundingRect(contoursConvex[1])
         if h1 > h0:
             index = [1,0]
             temp = h0
             h0 = h1
             h1 = temp
-        for i in range(len(contours)):
-            x,y,width,height = cv.boundingRect(contours[i])
+        for i in range(2, len(contoursConvex)):
+            x,y,width,height = cv.boundingRect(contoursConvex[i])
             if width > 10 and width < 200 and height > 10 and height < 800:
                 if height > h0:
                     h1 = h0
@@ -58,17 +63,17 @@ def filterContours(contours):
                 elif height > h1:
                     h1 = height
                     index[1] = i
-        contoursFinal.append(contours[index[0]])
-        contoursFinal.append(contours[index[1]])
+        contoursFinal.append(contoursConvex[index[0]])
+        contoursFinal.append(contoursConvex[index[1]])
         return contoursFinal
     else:
-        return contours
+        return contoursConvex
 
 def drawContours(input, contours):
     return cv.drawContours(input, contours, -1, (0,0,0), 3)
 
 def approxPoly(contour):
-    contour = cv.convexHull(contour)
+    #contour = cv.convexHull(contour)
     return cv.approxPolyDP(contour, 5, True)
 
 def findVertices(contour):
