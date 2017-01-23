@@ -17,21 +17,17 @@ CONST_TAPE_WIDTH = 17 #inches
 #CONST_CAMERA_ANGLE #convert to radians
 
 def displayImage(image):
-    #cv.namedWindow("stuffs", cv.WINDOW_NORMAL)
-    #cv.imshow("stuffs", image)
-    #cv.waitKey(0)
-    pass
+    cv.namedWindow("stuffs", cv.WINDOW_NORMAL)
+    cv.imshow("stuffs", image)
+    cv.waitKey(0)
 
 def filterImageTape(input):
     # input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
     #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light BGR
     #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light BGR
-    #return cv.inRange(input, np.array([0, 0, 235]), np.array([20, 20, 255]), input) #white light HSV
-    return cv.inRange(input, np.array([40, 0, 200]), np.array([100, 255, 255]), input) #green light HSV
-
-def filterImageBg(input):
-    return cv.inRange(input, np.array([0,100,150]), np.array([50,200,255]), input)
+    return cv.inRange(input, np.array([0, 0, 100]), np.array([100, 100, 255]), input) #white light HSV
+    #return cv.inRange(input, np.array([40, 0, 200]), np.array([100, 255, 255]), input) #green light HSV
 
 def findContours(input):
     return cv.findContours(input, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
@@ -172,8 +168,8 @@ def vision():
     #print("Capture:" + str(time.time()-interval))
     """
     for file in listdir("imagesNeww"):
-        print(file)
-        image = cv.imread("imagesNeww/" + str(file))
+        #print(file)
+        #image = cv.imread("imagesNeww/" + str(file))
         imgt = filterImageTape(image)
     #print("Filter Tape:" + str(time.time()-interval))
     #imgy = filterImageBg(image)
@@ -209,9 +205,17 @@ def vision():
     """
     #return image
 
+
+def takeImage():
+    image = camera.getFrame()
+    displayImage(image)
+
 def main():
-    vision()
+    #vision()
     #cv.waitKey(0)
+    #takeImage()
+    #getAngle()
+    pass
 
 if __name__ == "__main__":
     main()
@@ -223,6 +227,7 @@ def getAngle():
     image, contours, hierarchy = findContours(image)
     contoursTape = filterContours(contours)
     frame = drawContours(frame, contoursTape)
+    displayImage(frame)
     if len(contoursTape) == 2:
         mid = findMid(contoursTape)
         angle = findAngle(mid)
@@ -236,3 +241,5 @@ def getAngle():
         return "tape not in range"
     else:
         return "could not find tape"
+
+getAngle()
