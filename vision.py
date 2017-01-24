@@ -59,7 +59,6 @@ def highestContours(contours):
     return [contours[index[0]], contours[index[1]]]
 
 def filterContours(contours):
-    print("original: " + str(len(contours)))
     contoursFinal = []
     for contour in contours:
         x,y,w,h = cv.boundingRect(contour)
@@ -68,26 +67,24 @@ def filterContours(contours):
         if len(cv.approxPolyDP(contour, 5, True)) == 4:
             if aspectRatio > 0.38 and aspectRatio < 0.5:
                 contoursFinal.append(contour)
-    if len(contoursFinal) >= 2:
+    if len(contoursFinal) >= 2: #deletes duplicate contours
         contoursCopy = []
         for i in range(len(contoursFinal)):
-            print("len" + str(len(contoursFinal)))
-            if i == (len(contoursFinal) - 1):
-                contoursCopy.append(contoursFinal[i])
-                break
             x,y,w,h = cv.boundingRect(contoursFinal[i])
             for j in range((i + 1), len(contoursFinal)):
                 xx,yy,ww,hh = cv.boundingRect(contoursFinal[j])
-                print("dif: " + str(math.fabs(x-xx)))
-                if math.fabs(x - xx) > 5 and math.fabs(y - yy) > 5:
-                    contoursCopy.append(contoursFinal[i])
+                if math.fabs(x - xx) < 10 and math.fabs(y - yy) < 10:
+                    contoursFinal[i] = None
+        for contour in contoursFinal:
+            if contour != None:
+                contoursCopy.append(contour)
         contoursFinal = contoursCopy
-        print("double: " + str(len(contoursCopy)))
-    if len(contoursFinal) == 1:
+    if len(contoursFinal) == 1: #finds cut off tape
         x,y,w,h = cv.boundingRect(contoursFinal[0])
+        contours.remove(contoursFinal[0])
         for contour in contours:
             xx,yy,ww,hh = cv.boundingRect(contour)
-            if math.fabs(hh - h) < 5:
+            if math.fabs(hh - h) < 10:
                 contoursFinal.append(contour)
     if len(contoursFinal) > 2:
         contoursFinal = highestContours(contoursFinal)
@@ -202,6 +199,7 @@ def vision():
             angle = findAngle(mid)
             print("angle: " + str(angle))
         cv.imwrite("imagesFiltered/new" + str(file), image)
+        print("\n")
     #cv.imwrite("images/tape" + str(i) + ".png", image)
     #displayImage(image)
     """
