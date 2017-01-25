@@ -1,11 +1,11 @@
 import cv2 as cv
-import math
 import numpy as np
-import picamera
-import time
-from time import sleep
+import math
 from camera import Camera
-from os import listdir
+import time
+from operator import itemgetter
+#import picamera
+#from os import listdir
 
 CONST_VERTFOV = math.radians(41.41) #vertical field of view
 CONST_HORZFOV = math.radians(53.50) #horizontal field of view
@@ -21,12 +21,16 @@ def displayImage(image):
     cv.imshow("stuffs", image)
     cv.waitKey(0)
 
+def takeImage():
+    image = camera.getFrame()
+    displayImage(image)
+
 def filterImageTape(input):
     # input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
     #return cv.inRange(input, np.array([250,250,250]), np.array([255,255,255]), input) #white light BGR
     #return cv.inRange(input, np.array([100,200,0]), np.array([255,255,100]), input) #green light BGR
-    return cv.inRange(input, np.array([0, 0, 100]), np.array([100, 100, 255]), input) #white light HSV
+    return cv.inRange(input, np.array([0, 150, 80]), np.array([255, 255, 200]), input) #white light HSV
     #return cv.inRange(input, np.array([40, 0, 200]), np.array([100, 255, 255]), input) #green light HSV
 
 def findContours(input):
@@ -69,63 +73,35 @@ def drawContours(input, contours):
     return cv.drawContours(input, contours, -1, (0,0,0), 3)
 
 def approxPoly(contour):
-    #contour = cv.convexHull(contour)
+    contour = cv.convexHull(contour)
     return cv.approxPolyDP(contour, 5, True)
 
 def findVertices(contour):
     return cv.boxPoints(cv.minAreaRect(contour))
-
-def pointsX(point):
-    return point[0]
-
-def pointsY(point):
-    return point[1]
-
-def sortPointsY(points): #sorts points from greatest to least y value
-    points = sorted(points, key=pointsY)
-    points.reverse()
-    return points
-
-def sortPointsX(points): #sorts points from greatest to least x value
-    points = sorted(points, key=pointsX)
-    points.reverse()
-    return points
 
 def pointDistance(point1, point2): #finds distance between two points
     distance = math.sqrt(((point1[0]-point2[0])*(point1[0]-point2[0]))+((point1[1]-point2[1])*(point1[1]-point2[1])))
     return distance
 
 def findTapeHeight(vertices):
-    vertices = sortPointsX(vertices)
-    return pointDistance(vertices[0], vertices[1])
+    vertices = sorted(vertices, key = itemgetter(0))
+    return pointDistance(vertices[len(vertices) - 1], vertices[len(vertices) - 2])
 
 def findTapeWidth(vertices):
-    vertices = sortPointsY(vertices)
-    return pointDistance(vertices[0], vertices[1])
+    vertices = sorted(vertices, key = itemgetter(1))
+    return pointDistance(vertices[len(vertices) - 1], vertices[len(vertices) - 2])
 
 def findMidpoint(contours): #finds midpoint of tape, takes in a list of two contours
     midpoint = [0, 0]
-    vertices1 = sortPointsX(findVertices(contours[0]))
-    vertices2 = sortPointsX(findVertices(contours[1]))
-    print((vertices1))
-    print((vertices2))
-    midpoint[0] = math.fabs((vertices1[len(vertices1)-1][0] - vertices2[0][0])/2)
-    midpoint[1] = math.fabs((vertices1[len(vertices1)-1][1] - vertices2[0][1])/2)
-    print(midpoint[0])
+    vertices1 = sorted(findVertices(contours[0], key = itemgetter(0)))
+    vertices2 = sorted(findVertices(contours[1], key = itemgetter(0)))
+    midpoint[0] = math.fabs((vertices1[len(vertices1) - 1][0] - vertices2[0][0])/2)
+    midpoint[1] = math.fabs((vertices1[len(vertices1) - 1][1] - vertices2[0][1])/2)
     return midpoint
-
-def findMidTape(contours): #finds distance from center of image to midpoint of tape
-    midpoint = findMidpoint(contours)
-    return (midpoint[0] - (CONST_IMG_WIDTH/2)) #negative:left, positive:right
 
 def findHeight(contours): #finds distance from bottom of image to bottom of tape
     midpoint = findMidpoint(contours)
     return (CONST_IMG_HEIGHT - midpoint[1])
-
-def findAngleOld(contours):
-    horzPTR = CONST_IMG_WIDTH/CONST_HORZFOV #horizontal pixels to radians
-    angle = findMidTape(contours)/horzPTR #angle in radians; left:negative, right:positive
-    return math.degrees(angle) #degrees
 
 def findMid(contours):
     verticess = [findVertices(contour) for contour in contours]
@@ -205,21 +181,6 @@ def vision():
     """
     #return image
 
-
-def takeImage():
-    image = camera.getFrame()
-    displayImage(image)
-
-def main():
-    #vision()
-    #cv.waitKey(0)
-    #takeImage()
-    #getAngle()
-    pass
-
-if __name__ == "__main__":
-    main()
-
 def getAngle():
     frame = camera.getFrame()
     #image = cv.imread("stuff6.png")
@@ -242,4 +203,11 @@ def getAngle():
     else:
         return "could not find tape"
 
-getAngle()
+def main():
+    #vision()
+    #cv.waitKey(0)
+    #takeImage()
+    getAngle()
+
+if __name__ == "__main__":
+    main()
