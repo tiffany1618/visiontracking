@@ -4,7 +4,6 @@ import math
 from camera import Camera
 import time
 from operator import itemgetter
-#import picamera
 from os import listdir
 from random import random
 
@@ -12,10 +11,6 @@ CONST_VERTFOV = math.radians(41.41) #vertical field of view
 CONST_HORZFOV = math.radians(53.50) #horizontal field of view
 CONST_IMG_HEIGHT = 480 #pixels
 CONST_IMG_WIDTH = 720 #pixels
-#CONST_CAMERA_HEIGHT #inches
-CONST_TAPE_HEIGHT = 7 #inches
-CONST_TAPE_WIDTH = 17 #inches
-#CONST_CAMERA_ANGLE #convert to radians
 
 def displayImage(image):
     cv.namedWindow("stuffs", cv.WINDOW_NORMAL)
@@ -104,36 +99,12 @@ def drawContours(input, contours):
         input = cv.drawContours(input, contours, i, color, 3)
     return input
 
-def approxPoly(contour):
-    contour = cv.convexHull(contour)
-    return cv.approxPolyDP(contour, 5, True)
-
 def findVertices(contour):
     return cv.boxPoints(cv.minAreaRect(contour))
 
 def pointDistance(point1, point2): #finds distance between two points
     distance = math.sqrt(((point1[0]-point2[0])*(point1[0]-point2[0]))+((point1[1]-point2[1])*(point1[1]-point2[1])))
     return distance
-
-def findTapeHeight(vertices):
-    vertices = sorted(vertices, key = itemgetter(0))
-    return pointDistance(vertices[len(vertices) - 1], vertices[len(vertices) - 2])
-
-def findTapeWidth(vertices):
-    vertices = sorted(vertices, key = itemgetter(1))
-    return pointDistance(vertices[len(vertices) - 1], vertices[len(vertices) - 2])
-
-def findMidpoint(contours): #finds midpoint of tape, takes in a list of two contours
-    midpoint = [0, 0]
-    vertices1 = sorted(findVertices(contours[0], key = itemgetter(0)))
-    vertices2 = sorted(findVertices(contours[1], key = itemgetter(0)))
-    midpoint[0] = math.fabs((vertices1[len(vertices1) - 1][0] - vertices2[0][0])/2)
-    midpoint[1] = math.fabs((vertices1[len(vertices1) - 1][1] - vertices2[0][1])/2)
-    return midpoint
-
-def findHeight(contours): #finds distance from bottom of image to bottom of tape
-    midpoint = findMidpoint(contours)
-    return (CONST_IMG_HEIGHT - midpoint[1])
 
 def findMid(contours):
     verticess = [findVertices(contour) for contour in contours]
@@ -151,17 +122,8 @@ def findAngle(mid):
     radians = (mid - CONST_IMG_WIDTH / 2) * CONST_HORZFOV / CONST_IMG_WIDTH
     return math.degrees(radians)
 
-def findDistance(height, tapeHeight):
-    heightIn = (height * CONST_TAPE_HEIGHT)/tapeHeight #inches
-    vertPTR = CONST_IMG_HEIGHT/CONST_VERTFOV #vertical pixels to radians
-    phi = height/vertPTR 
-    cameraDistance = heightIn/math.sin(phi) #direct hypotenuse
-    robotDistance = math.sqrt((cameraDistance * cameraDistance) - (heightIn * heightIn))
-    return robotDistance #inches
-          
-camera = Camera(-6)
+camera = Camera()
 camera.getFrame()
-#camera = picamera.PiCamera()
 
 def vision():
     interval = time.time() 
@@ -179,15 +141,15 @@ def vision():
         print(file)
         image = cv.imread("imagesNeww/" + str(file))
         imgt = filterImageTape(image)
-    #print("Filter Tape:" + str(time.time()-interval))
-    #imgy = filterImageBg(image)
-    #print("Filter Image Background:" + str(time.time()-interval))
-    #img1, contoursy, hierarchy1 = findContours(imgy)
-    #print("Find Tape Contours:" + str(time.time()-interval))
+        #print("Filter Tape:" + str(time.time()-interval))
+        #imgy = filterImageBg(image)
+        #print("Filter Image Background:" + str(time.time()-interval))
+        #img1, contoursy, hierarchy1 = findContours(imgy)
+        #print("Find Tape Contours:" + str(time.time()-interval))
         img2, contourst, hierarchy2 = findContours(imgt)
-    #print("Find Tape Contours:" + str(time.time()-interval))
+        #print("Find Tape Contours:" + str(time.time()-interval))
         contoursFinal = filterContours(contourst)
-    #print("Filter Contours:" + str(time.time()-interval))
+        #print("Filter Contours:" + str(time.time()-interval))
         #image = cv.cvtColor(image, cv.COLOR_BGR2HSV)
         image = drawContours(image, contoursFinal)
         print("contoursFinal: " + str(len(contoursFinal)))
