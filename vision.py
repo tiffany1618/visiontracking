@@ -89,7 +89,7 @@ camera = Camera(-6)
 camera.getFrame()
 
 def vision():
-    for file in listdir("imagesNeww"):
+    """for file in listdir("imagesNeww"):
         print(file)
         frame = cv.imread("imagesNeww/" + str(file))
         image = filterImageTape(frame)
@@ -101,6 +101,7 @@ def vision():
         print("\n")
     """
     frame = cv.imread("image.png")
+    #frame = camera.getFrame()
     image = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     image = cv.inRange(image, (30), (100), image) 
     image, contours, hierarchy = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
@@ -110,11 +111,11 @@ def vision():
         if w > 20 and h > 20:
             contourss.append(contour)
     print(len(contourss))
-    contourss = filterContours(contourss)
+    contourss = filterContours(contourss)   #only works for image.png. imagewc.png gets a pair of tiny words
     print(len(contourss))
     frame = drawContours(frame, contourss)
+    #cv.imwrite("imageb.png", frame)
     displayImage(frame)
-    """
 
 def getAngle():
     frame = camera.getFrame()
