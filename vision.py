@@ -17,10 +17,6 @@ def displayImage(image):
     cv.imshow("stuffs", image)
     cv.waitKey(0)
 
-def takeImage():
-    image = camera.getFrame()
-    displayImage(image)
-
 def filterImageTape(input):
     input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
@@ -32,48 +28,29 @@ def filterImageTape(input):
 def findContours(input):
     return cv.findContours(input, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
-def highestContours(contours):
-    index = [0,1]
-    x0,y0,w0,h0 = cv.boundingRect(contours[0])
-    x1,y1,w1,h1 = cv.boundingRect(contours[1])
-    if h1 > h0:
-        index = [1,0]
-        temp = h0
-        h0 = h1
-        h1 = temp
-    for i in range(2, len(contours)):
-        x,y,width,height = cv.boundingRect(contours[i])
-        if height > h0:
-            h1 = h0
-            h0 = height
-            index[1] = index[0]
-            index[0] = i
-        elif height > h1:
-            h1 = height
-            index[1] = i
-    return [contours[index[0]], contours[index[1]]]
-
 def filterContours(contours):
     contoursFinal = []
+    if len(contours) > 1: #deletes duplicate contours
+        contoursCopy = []
+        for i in range(len(contours)):
+            x,y,w,h = cv.boundingRect(contours[i])
+            for j in range((i + 1), len(contours)):
+                xx,yy,ww,hh = cv.boundingRect(contours[j])
+                if math.fabs(x - xx) < 10 and math.fabs(y - yy) < 10:
+                    contours[i] = None
+        for contour in contours:
+            if contour != None:
+                contoursCopy.append(contour)
+        contours = contoursCopy
     for contour in contours:
         x,y,w,h = cv.boundingRect(contour)
         aspectRatio = float(w)/h
-        #if cv.isContourConvex(contour):
-        if len(cv.approxPolyDP(contour, 5, True)) == 4:
-            if aspectRatio > 0.38 and aspectRatio < 0.5:
+        if w > 10 and h > 10:
+            if aspectRatio > 0.3 and aspectRatio < 0.5:
                 contoursFinal.append(contour)
-    if len(contoursFinal) >= 2: #deletes duplicate contours
-        contoursCopy = []
-        for i in range(len(contoursFinal)):
-            x,y,w,h = cv.boundingRect(contoursFinal[i])
-            for j in range((i + 1), len(contoursFinal)):
-                xx,yy,ww,hh = cv.boundingRect(contoursFinal[j])
-                if math.fabs(x - xx) < 10 and math.fabs(y - yy) < 10:
-                    contoursFinal[i] = None
-        for contour in contoursFinal:
-            if contour != None:
-                contoursCopy.append(contour)
-        contoursFinal = contoursCopy
+    if len(contoursFinal) == 2:
+        if cv.matchShapes(contoursFinal[0], contoursFinal[1], 3, 0.0) > 0.1:
+            contoursFinal = []
     if len(contoursFinal) == 1: #finds cut off tape
         x,y,w,h = cv.boundingRect(contoursFinal[0])
         contours.remove(contoursFinal[0])
@@ -81,16 +58,6 @@ def filterContours(contours):
             xx,yy,ww,hh = cv.boundingRect(contour)
             if math.fabs(hh - h) < 10:
                 contoursFinal.append(contour)
-    if len(contoursFinal) > 2:
-        contoursFinal = highestContours(contoursFinal)
-    """
-    if len(contoursFinal) == 2:
-        if cv.matchShapes(contoursFinal[0], contoursFinal[1], 1, 0.0) < 0.002:
-            print("matchshapes: " + str(len(contoursFinal)))
-            return contoursFinal
-        else:
-            return []
-    """
     return contoursFinal
 
 def drawContours(input, contours):
@@ -101,10 +68,6 @@ def drawContours(input, contours):
 
 def findVertices(contour):
     return cv.boxPoints(cv.minAreaRect(contour))
-
-def pointDistance(point1, point2): #finds distance between two points
-    distance = math.sqrt(((point1[0]-point2[0])*(point1[0]-point2[0]))+((point1[1]-point2[1])*(point1[1]-point2[1])))
-    return distance
 
 def findMid(contours):
     verticess = [findVertices(contour) for contour in contours]
@@ -122,61 +85,36 @@ def findAngle(mid):
     radians = (mid - CONST_IMG_WIDTH / 2) * CONST_HORZFOV / CONST_IMG_WIDTH
     return math.degrees(radians)
 
-camera = Camera()
+camera = Camera(-6)
 camera.getFrame()
 
 def vision():
-    interval = time.time() 
-    """
-    for i in range(10):
-        print("taking image")
-        image = camera.getFrame()
-        cv.imwrite("imagesNew/tape" + str(i) + ".png", image)
-        sleep(15)
-    #camera.capture("stuff2.png")
-    #image = cv.imread("stuff1.png")
-    #print("Capture:" + str(time.time()-interval))
-    """
     for file in listdir("imagesNeww"):
         print(file)
-        image = cv.imread("imagesNeww/" + str(file))
-        imgt = filterImageTape(image)
-        #print("Filter Tape:" + str(time.time()-interval))
-        #imgy = filterImageBg(image)
-        #print("Filter Image Background:" + str(time.time()-interval))
-        #img1, contoursy, hierarchy1 = findContours(imgy)
-        #print("Find Tape Contours:" + str(time.time()-interval))
-        img2, contourst, hierarchy2 = findContours(imgt)
-        #print("Find Tape Contours:" + str(time.time()-interval))
-        contoursFinal = filterContours(contourst)
-        #print("Filter Contours:" + str(time.time()-interval))
-        #image = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-        image = drawContours(image, contoursFinal)
-        print("contoursFinal: " + str(len(contoursFinal)))
-        if len(contoursFinal) == 2:
-            x,y,w,h = cv.boundingRect(contoursFinal[0])
-            xx,yy,ww,hh = cv.boundingRect(contoursFinal[1])
-            mid = findMid(contoursFinal)
-            print("mid: " + str(mid))
-            angle = findAngle(mid)
-            print("angle: " + str(angle))
-        cv.imwrite("imagesFiltered/new" + str(file), image)
+        frame = cv.imread("imagesNeww/" + str(file))
+        image = filterImageTape(frame)
+        image, contours, hierarchy = findContours(image)
+        contours = filterContours(contours)
+        print(len(contours))
+        frame = drawContours(frame, contours)
+        cv.imwrite("imagesFiltered/new" + str(file), frame)
         print("\n")
-    #cv.imwrite("images/tape" + str(i) + ".png", image)
-    #displayImage(image)
     """
-    print(len(contoursFinal))
-    if len(contoursFinal) == 2:
-        points = findVertices(contoursFinal[0])
-        distance = findDistance(findHeight(contoursFinal), findTapeHeight(points))
-        print("Distance:" + str(distance))
-        angle = findAngle(contoursFinal)
-        print("Angle: " + str(angle))
-    else:
-        print("cannot find contours...blame build")
-    print("find distance:" + str(time.time()-interval))
+    frame = cv.imread("image.png")
+    image = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    image = cv.inRange(image, (30), (100), image) 
+    image, contours, hierarchy = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+    contourss = []
+    for contour in contours:
+        x,y,w,h = cv.boundingRect(contour)
+        if w > 20 and h > 20:
+            contourss.append(contour)
+    print(len(contourss))
+    contourss = filterContours(contourss)
+    print(len(contourss))
+    frame = drawContours(frame, contourss)
+    displayImage(frame)
     """
-    #return image
 
 def getAngle():
     frame = camera.getFrame()
@@ -200,9 +138,6 @@ def getAngle():
 
 def main():
     vision()
-    #cv.waitKey(0)
-    #takeImage()
-    #getAngle()
 
 if __name__ == "__main__":
     main()
