@@ -9,8 +9,8 @@ from random import random
 
 CONST_VERTFOV = math.radians(41.41) #vertical field of view
 CONST_HORZFOV = math.radians(53.50) #horizontal field of view
-CONST_IMG_HEIGHT = 480 #pixels
-CONST_IMG_WIDTH = 720 #pixels
+CONST_IMG_HEIGHT = 800 #pixels
+CONST_IMG_WIDTH = 1280 #pixels
 CONST_DIST_RATIO = 6.25 / 5 #ratio of distance between tapes to height of tape
 
 def displayImage(image):
@@ -47,14 +47,16 @@ def filterContours(contours):
         x,y,w,h = cv.boundingRect(contour)
         aspectRatio = float(w)/h
         if w > 10 and h > 20:
-            if aspectRatio > 0.3 and aspectRatio < 0.6:
-                contoursFinal.append(contour)
+            #if aspectRatio > 0.3 and aspectRatio < 0.6:
+            contoursFinal.append(contour)
     print("aspectratio: " + str(len(contoursFinal)))
+    """
     if len(contoursFinal) ==  2:
         if cv.matchShapes(contoursFinal[0], contoursFinal[1], 3, 0.0) > 0.4:
             contoursFinal = []
         print("matchshapes: " + str(len(contoursFinal)))
-    elif len(contoursFinal) == 1: #finds cut off tape
+    """
+    if len(contoursFinal) == 1: #finds cut off tape
         x,y,w,h = cv.boundingRect(contoursFinal[0])
         for contour in contours:
             xx,yy,ww,hh = cv.boundingRect(contour)
@@ -101,63 +103,73 @@ def findAngle(mid):
     radians = (mid - CONST_IMG_WIDTH / 2) * CONST_HORZFOV / CONST_IMG_WIDTH
     return math.degrees(radians)
 
-camera = Camera(-6)
+camera = Camera(-7)
 camera.getFrame()
 
 def vision():
     currentTime = time.time()
     #for file in listdir("imagesWhite"):
         #print(file)
-    #frame = camera.getFrame()
-    ret, frame = cap.read()
+    frame = camera.getFrame()
+    cv.imwrite("original.png", frame)
+    #ret, frame = cap.read()
     #print("read image: " + str(time.time() - currentTime))
     #frame = cv.imread("imagesWhite/tapew8.png")
-    print(cap.get(3))
-    print(cap.get(4))
+    #print(cap.get(3))
+    #print(cap.get(4))
     image = filterImageTape(frame)
     print("filter image: " + str(time.time() - currentTime))
     image, contours, hierarchy = findContours(image)
     print("find contours: " + str(time.time() - currentTime))
     print(len(contours))
+    framecont = frame
+    framecont = drawContours(framecont, contours)
+    cv.imwrite("imagecontours.png", framecont)
     contours = filterContours(contours)
     print("filter contous: " + str(time.time() - currentTime))
     print(len(contours))
     #cv.imwrite("imagesFilteredWhite/new" + str(file), frame)
     frame = drawContours(frame, contours)
-    cv.imwrite("image.png", frame)
+    frame = cv.rectangle(frame, (int(CONST_IMG_WIDTH/2), 0), (int(CONST_IMG_WIDTH/2) + 4, 1000), 255 << 16 + 255)
     if len(contours) == 1:
         angle = findAngle(estimateMid(contours[0]))
         print(angle)
     if len(contours) == 2:
-        angle = findAngle(findMid(contours))
+        mid = findMid(contours)
+        angle = findAngle(mid)
+        frame = cv.rectangle(frame, (int(mid), 0), (int(mid) + 4, 1000), 255 << 16 + 255)
         print(angle)
+    cv.imwrite("image.png", frame)
     print("\n")
 
 def getAngle():
     isFlipped = True
     frame = camera.getFrame()
-    cv.imwrite("original.png", frame)
+    cv.imwrite("original1.png", frame)
     image = filterImageTape(frame)
     image, contours, hierarchy = findContours(image)
     contoursTape = filterContours(contours)
     frame = drawContours(frame, contoursTape)
-    cv.imwrite("contours.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
+    cv.imwrite("contours1.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
     print(len(contoursTape))
     if len(contoursTape) == 2:
         angle = findAngle(findMid(contoursTape))
         frame = cv.rectangle(frame, (int(mid), 0), (int(mid) + 4, 1000), 255 << 16 + 255)
-        cv.imwrite("tape.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
+        cv.imwrite("tape1.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
         if isFlipped:
             angle *= -1
         print(angle)
         return str(angle)
     elif len(contoursTape) == 1:
+        """
         angle = findAngle(estimateMid(contoursTape[0]))
-        cv.imwrite("tape.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
+        cv.imwrite("tape1.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
         if isFlipped:
             angle *= -1
         print(angle)
         return str(angle)
+        """
+        return "one tape found"
     else:
         return "could not find tape"
 
