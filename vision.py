@@ -21,7 +21,7 @@ def displayImage(image):
 def filterImageTape(input):
     input = cv.blur(input, (5,5))
     input = cv.cvtColor(input, cv.COLOR_BGR2HSV)
-    return cv.inRange(input, np.array([0,150,150]), np.array([50,255,255]), input) #white light HSV
+    return cv.inRange(input, np.array([0,0,150]), np.array([50,255,255]), input) #white light HSV
     #return cv.inRange(input, np.array([100,100,100]), np.array([255,255,255]), input) #white light BGR
 
 def findContours(input):
@@ -108,10 +108,9 @@ camera.getFrame()
 
 def vision():
     currentTime = time.time()
-    #for file in listdir("imagesWhite"):
-        #print(file)
     frame = camera.getFrame()
-    cv.imwrite("original.png", frame)
+    #frame = cv.imread("original1.png")
+    #cv.imwrite("images/" + str(round(time.time())) + ".png", frame)
     #ret, frame = cap.read()
     #print("read image: " + str(time.time() - currentTime))
     #frame = cv.imread("imagesWhite/tapew8.png")
@@ -153,7 +152,8 @@ def getAngle():
     cv.imwrite("contours1.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
     print(len(contoursTape))
     if len(contoursTape) == 2:
-        angle = findAngle(findMid(contoursTape))
+        mid = findMid(contoursTape)
+        angle = findAngle(mid)
         frame = cv.rectangle(frame, (int(mid), 0), (int(mid) + 4, 1000), 255 << 16 + 255)
         cv.imwrite("tape1.png", cv.cvtColor(frame, cv.COLOR_BGR2HSV))
         if isFlipped:
@@ -175,6 +175,7 @@ def getAngle():
 
 def main():
     vision()
+    #getAngle()
 
 if __name__ == "__main__":
     main()
