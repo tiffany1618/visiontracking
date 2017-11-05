@@ -1,6 +1,7 @@
 *.sw[a-p]
 
 CMakeCache.txt
+CMakeLists.txt
 CMakeFiles
 CMakeScripts
 Testing
@@ -10,7 +11,10 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 __pycache__
+.idea/
 
 imagesFiltered
 imagesCont
 oldimagesCont
+images
+oldimages
