@@ -30,4 +30,3 @@ while ret:
     if cv.waitKey(1) & 0xFF == ord('q'):
         vc.release()
         break
-

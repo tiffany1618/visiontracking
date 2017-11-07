@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import math
-from camera import Camera
+#from camera import Camera
 import time
 from operator import itemgetter
 from os import listdir
@@ -12,6 +12,7 @@ CONST_HORZFOV = math.radians(53.50) #horizontal field of view
 CONST_IMG_HEIGHT = 800 #pixels
 CONST_IMG_WIDTH = 1280 #pixels
 CONST_DIST_RATIO = 6.25 / 5 #ratio of distance between tapes to height of tape
+CONST_TAPE_HEIGHT = 7 #inches
 
 def displayImage(image):
     cv.namedWindow("stuffs", cv.WINDOW_NORMAL)
@@ -42,12 +43,15 @@ def filterContours(contours):
             if contour != None:
                 contoursCopy.append(contour)
         contours = contoursCopy
+        print("aspectratio: " + str(len(contoursCopy)))
+    #find vert rectangle
     for contour in contours:
         x,y,w,h = cv.boundingRect(contour)
         aspectRatio = float(w)/h
         if w > 10 and h > 20:
             if aspectRatio > 0.3 and aspectRatio < 0.6:
             	contoursFinal.append(contour)
+
     print("aspectratio: " + str(len(contoursFinal)))
     if len(contoursFinal) > 2:
         contoursHolder = contoursFinal
@@ -103,48 +107,102 @@ def estimateMid(contour):
     xss = sorted(xss)
     if (x + w/2) <= (CONST_IMG_WIDTH / 2):
         xdist = (xss[0][0] + xss[0][1]) / 2
-        mid = xdist - (CONST_DIST_RATIO * h / 2)  
+        mid = xdist - (CONST_DIST_RATIO * h / 2)
     if (x + w/2) > (CONST_IMG_WIDTH / 2):
         xdist = ((xss[0][len(xss) - 1] + xss[0][len(xss) - 2]) / 2)
-        mid = xdist + (CONST_DIST_RATIO * h / 2)  
+        mid = xdist + (CONST_DIST_RATIO * h / 2)
     return mid
 
 def findAngle(mid):
     radians = (mid - CONST_IMG_WIDTH / 2) * CONST_HORZFOV / CONST_IMG_WIDTH
     return math.degrees(radians)
 
-camera = Camera(-7)
-camera.getFrame()
+#camera = Camera(-7)
+#camera.getFrame()
+
+def findBottomY(points):
+     lowestY = points[0][0]
+     secondLowestY = points[1][0] # [0] at end needed to unpack point
+     for point in points:
+         point = point[0] # for unpacking point
+         if point[1] < lowestY[1]:
+             secondLowestY = lowestY
+             lowestY = point
+         elif point[1] > secondLowestY[1]:
+             secondLowestY = point
+     return (lowestY, secondLowestY)
+
+def findTopY(points):
+     highestY = points[0][0]
+     secondHighestY = points[1][0] # [0] at end needed to unpack point
+     for point in points:
+         point = point[0] # for unpacking point
+         if point[1] > highestY[1]:
+             secondHighestY = highestY
+             highestY = point
+         elif point[1] > secondHighestY[1]:
+             secondHighestY = point
+     return (highestY, secondHighestY)
+
+def findHeight(vertices):
+    verticess = findVertices(vertices)
+    bottomY1, bottomY2 = findBottomY(vertices)
+    return (CONST_IMG_HEIGHT - bottomY1[1])
+
+def findTapeHeight(vertices):
+    bottomY1, bottomY2 = findBottomY(vertices)
+    topY1, topY2 = findTopY(vertices)
+    return (bottomY1[1] - topY1[1])
+
+def findDistance(height, tapeHeight):
+     heightIn = (height * CONST_TAPE_HEIGHT)/tapeHeight #inches
+     vertPTR = CONST_IMG_HEIGHT/CONST_VERTFOV #vertical pixels to radians
+     phi = height/vertPTR
+     cameraDistance = heightIn/math.sin(phi) #direct hypotenuse
+     robotDistance = math.sqrt((cameraDistance * cameraDistance) - (heightIn * heightIn))
+     return robotDistance #inches
 
 def vision():
-	currentTime = time.time()
-	#frame = camera.getFrame()
-	for file in listdir("oldimages"):
-		print(file)
-		frame = cv.imread("oldimages/" + file)
-		print("readimage: " + str(time.time() - currentTime))
-		image = filterImageTape(frame)
-		print("filter image: " + str(time.time() - currentTime))
-		image, contours, hierarchy = findContours(image)
-		print("find contours: " + str(time.time() - currentTime))
-		contours = filterContours(contours)
-		print("filter contous: " + str(time.time() - currentTime))
-		print(len(contours))
-		frame = drawContours(frame, contours)
-		frame = cv.rectangle(frame, (int(CONST_IMG_WIDTH/2), 0), (int(CONST_IMG_WIDTH/2) + 4, 1000), (0,0,255))
-		cv.imwrite("oldimagesCont/" + file, frame)
-		print("writeimage: " + str(time.time() - currentTime))
-		if len(contours) == 1:
-			angle = findAngle(estimateMid(contours[0]))
-			print(angle)
-		if len(contours) == 2:
-			mid = findMid(contours)
-			angle = findAngle(mid)
-			print("findangle: " + str(time.time() - currentTime))
-			frame = cv.rectangle(frame, (int(mid), 0), (int(mid) + 4, 1000), (255,0,0))
-			print(angle)
-		print("\n")
-    #cv.imwrite("image.png", frame)
+    for file in listdir("oldimages"):
+        print(file)
+        #frame = cv.imread("oldimages/" + file)
+        frame = cv.imread("oldimages/" + file)
+        #print("readimage: " + str(time.time() - currentTime))
+        image = filterImageTape(frame)
+        #print("filter image: " + str(time.time() - currentTime))
+        image, contours, hierarchy = findContours(image)
+        #print("find contours: " + str(time.time() - currentTime))
+        contours = filterContours(contours)
+        #contours = findRect(contours)
+        print(len(contours))
+        print("filter contours: " + str(time.time() - currentTime))
+        print(len(contours))
+        mid = int(findMid(contours))
+        frame = drawContours(frame, contours)
+        frame = cv.rectangle(frame, (int(CONST_IMG_WIDTH/2), 0), (int(CONST_IMG_WIDTH/2) + 4, 1000), (0,0,255))
+        frame = cv.rectangle(frame, (int(findMid(contours))-2, 0), (int(findMid(contours))-2, 1000), (0,0,255))
+        #cv.imwrite("newpaint/" + file, frame)
+        angle = findAngle(mid) * -1
+        print("Angle: " + str(angle))
+
+        distance = findDistance(findHeight(contours[0]), findTapeHeight(contours[0]))
+        print("Distance: " + str(distance))
+
+        print(str(time.time() - currentTime))
+        #print("writeimage: " + str(time.time() - currentTime))
+        #if len(contours) == 1:
+            #angle = findAngle(estimateMid(contours[0]))
+            #print(angle)
+        #if len(contours) == 2:
+            #mid = findMid(contours)
+            #angle = findAngle(mid)
+            #print("findangle: " + str(time.time() - currentTime))
+            #frame = cv.rectangle(frame, (int(mid), 0), (int(mid) + 4, 1000), (255,0,0))
+            #print(angle)
+        #print("\n")
+
+        cv.imwrite("lifeisconfusing/" + file, frame)
+        #cv.imwrite("image.png", frame)
 
 def getAngle():
 	isFlipped = True
