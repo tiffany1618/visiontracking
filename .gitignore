@@ -12,9 +12,6 @@ compile_commands.json
 CTestTestfile.cmake
 __pycache__
 .idea/
+*.pyc
+*.pyd
 
-imagesFiltered
-imagesCont
-oldimagesCont
-images
-oldimages
