@@ -165,8 +165,8 @@ def findDistance(height, tapeHeight):
 def vision():
     for file in listdir("oldimages"):
         print(file)
-        #frame = cv.imread("oldimages/" + file)
         frame = cv.imread("oldimages/" + file)
+        #frame = cv.imread("testrect")
         #print("readimage: " + str(time.time() - currentTime))
         image = filterImageTape(frame)
         #print("filter image: " + str(time.time() - currentTime))
@@ -175,8 +175,9 @@ def vision():
         contours = filterContours(contours)
         #contours = findRect(contours)
         print(len(contours))
-        print("filter contours: " + str(time.time() - currentTime))
-        print(len(contours))
+        print("filter contours: " + "len(contours)")
+        print(contours)
+        """
         mid = int(findMid(contours))
         frame = drawContours(frame, contours)
         frame = cv.rectangle(frame, (int(CONST_IMG_WIDTH/2), 0), (int(CONST_IMG_WIDTH/2) + 4, 1000), (0,0,255))
@@ -202,6 +203,7 @@ def vision():
         #print("\n")
 
         cv.imwrite("lifeisconfusing/" + file, frame)
+"""
         #cv.imwrite("image.png", frame)
 
 def getAngle():
